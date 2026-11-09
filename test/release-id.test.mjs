@@ -46,3 +46,10 @@ test('files that do not shape the release leave the fingerprint unchanged', asyn
   await edit(directory, 'README.md', (text) => `${text}\nChanged.\n`);
   assert.equal(await pipelineFingerprint(directory), baseline);
 });
+
+test('the realtime block of config/sncb.json leaves the fingerprint unchanged', async () => {
+  const baseline = await pipelineFingerprint(await copy('baseline'));
+  const directory = await copy('realtime');
+  await editJson(directory, 'config/sncb.json', (config) => ({ ...config, realtime: { ...config.realtime, enabled: !config.realtime.enabled, note: 'Changed' } }));
+  assert.equal(await pipelineFingerprint(directory), baseline, 'realtime metadata is served elsewhere and must not start a new release');
+});

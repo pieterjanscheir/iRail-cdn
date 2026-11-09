@@ -22,7 +22,8 @@ const root = path.resolve(import.meta.dirname, '..');
 /**
  * Fingerprint of the code, contracts and configuration that shape the output: a pipeline change must not reuse a
  * release id. config/ is hashed whole (rights, license, attribution, converter profile and station pin all reach the
- * published files), and src/iri-strategy.ts mints the enrichment IRIs.
+ * published files), and src/iri-strategy.ts mints the enrichment IRIs. The `realtime` block of config/sncb.json is
+ * left out: realtime is served elsewhere, and the feeds a release does advertise are part of its id on their own.
  */
 export async function pipelineFingerprint(base = root) {
   const files = [
@@ -31,7 +32,14 @@ export async function pipelineFingerprint(base = root) {
     ...(await walk(path.join(base, 'config'))).map((name) => `config/${name}`),
   ];
   const hash = createHash('sha256');
-  for (const file of files) hash.update(file).update(await readFile(path.join(base, file)));
+  for (const file of files) {
+    let contents = await readFile(path.join(base, file));
+    if (file === 'config/sncb.json') {
+      const { realtime, ...rest } = JSON.parse(contents);
+      contents = JSON.stringify(rest);
+    }
+    hash.update(file).update(contents);
+  }
   return hash.digest('hex');
 }
 const sha8 = (...parts) => createHash('sha256').update(JSON.stringify(parts)).digest('hex').slice(0, 8);
